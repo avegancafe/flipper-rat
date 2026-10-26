@@ -1,0 +1,11 @@
+Filetype: flipper-rat profile
+Version: 1
+# start = play from the beginning; pointer toggles the laser pointer.
+Name: PowerPoint
+OS: macOS
+next: RIGHT
+prev: LEFT
+start: CMD+SHIFT+ENTER
+stop: ESC
+black: B
+pointer: CMD+L

@@ -1,0 +1,10 @@
+Filetype: flipper-rat profile
+Version: 1
+Name: Keynote
+OS: macOS
+next: RIGHT
+prev: LEFT
+start: CMD+ALT+P
+stop: ESC
+black: B
+pointer: none

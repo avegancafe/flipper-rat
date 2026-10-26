@@ -1,0 +1,15 @@
+App(
+    appid="flipper_rat",
+    name="flipper-rat",
+    apptype=FlipperAppType.EXTERNAL,
+    entry_point="flipper_rat_app",
+    stack_size=4 * 1024,
+    sources=["*.c", "!tests"],
+    fap_version="0.1",
+    fap_icon="flipper_rat_10px.png",
+    fap_category="GPIO",
+    fap_libs=["ble_profile"],
+    fap_file_assets="files",
+    fap_description="Air mouse and presentation remote for the Video Game Module",
+    fap_author="Kyle Holzinger",
+)
