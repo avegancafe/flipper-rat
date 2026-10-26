@@ -77,7 +77,8 @@ Impress (Linux).
 ## Settings
 
 Connection (Bluetooth/USB), sensitivity, acceleration curve, motion (clutch/always on),
-grip (flat = screen up; upright = screen facing you, top edge up), invert X/Y.
+grip (flat = screen up; upright = screen facing you, top edge up), left/right (normal/inverted),
+up/down (*Point*: tilt up to move up, the default; *Flight*: tilt up to move down, like a joystick).
 Stored in `SD:/apps_data/flipper_rat/settings.txt`.
 
 Bluetooth shows up as **`Rat <your Flipper's name>`** with its own pairing store, so it doesn't

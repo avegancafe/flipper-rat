@@ -219,6 +219,8 @@ static const char* const sensitivity_names[] = {"Low", "Medium", "High"};
 static const char* const off_on[] = {"Off", "On"};
 static const char* const motion_names[] = {"Clutch", "Always on"};
 static const char* const grip_names[] = {"Flat", "Upright"};
+static const char* const horiz_names[] = {"Normal", "Inverted"};
+static const char* const vert_names[] = {"Point", "Flight"};
 
 typedef enum {
     SetTransport,
@@ -294,8 +296,8 @@ static void settings_build(RatApp* app) {
     add_setting(app, "Accel curve", off_on, 2, s->accel_curve);
     add_setting(app, "Motion", motion_names, 2, s->always_on);
     add_setting(app, "Grip", grip_names, 2, s->grip);
-    add_setting(app, "Invert X", off_on, 2, s->invert_x);
-    add_setting(app, "Invert Y", off_on, 2, s->invert_y);
+    add_setting(app, "Left/right", horiz_names, 2, s->invert_x);
+    add_setting(app, "Up/down", vert_names, 2, s->invert_y);
 }
 
 /* ---------- dispatcher ---------- */

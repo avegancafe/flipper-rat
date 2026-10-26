@@ -161,7 +161,8 @@ static void process_packet(
     /* Near vertical the yaw/pitch split is unstable; skip those samples. */
     if(!isfinite(pitch) || pitch < -PITCH_LIMIT_DEG || pitch > PITCH_LIMIT_DEG) return;
 
-    rat_tracker_feed(&m->tracker, &m->config, yaw, -pitch, m->active);
+    /* Tilting the top edge up moves the cursor up ("point"); Invert Y gives flight-stick style. */
+    rat_tracker_feed(&m->tracker, &m->config, yaw, pitch, m->active);
 
     if(++(*sample_cnt) >= rate_div) {
         *sample_cnt = 0;
