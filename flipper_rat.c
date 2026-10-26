@@ -239,13 +239,11 @@ static void setting_changed(VariableItem* item) {
 
     switch(variable_item_list_get_selected_item_index(app->settings_list)) {
     case SetTransport:
+        /* Restarting USB/BT here would run inside the list's locked model and block the GUI
+         * thread while the USB/BT services work, so do it from the dispatcher instead. */
+        s->transport = v;
         variable_item_set_current_value_text(item, transport_names[v]);
-        if((RatTransportType)v != s->transport) {
-            transport_stop(app);
-            s->transport = v;
-            transport_start(app);
-            menu_refresh(app);
-        }
+        view_dispatcher_send_custom_event(app->view_dispatcher, RatEventTransportChanged);
         break;
     case SetSensitivity:
         s->sensitivity = v;
@@ -265,11 +263,11 @@ static void setting_changed(VariableItem* item) {
         break;
     case SetInvertX:
         s->invert_x = v;
-        variable_item_set_current_value_text(item, off_on[v]);
+        variable_item_set_current_value_text(item, horiz_names[v]);
         break;
     case SetInvertY:
         s->invert_y = v;
-        variable_item_set_current_value_text(item, off_on[v]);
+        variable_item_set_current_value_text(item, vert_names[v]);
         break;
     default:
         break;
@@ -316,6 +314,13 @@ static bool custom_event_cb(void* context, uint32_t event) {
         return true;
     case RatEventExitMode:
         view_dispatcher_switch_to_view(app->view_dispatcher, RatViewMenu);
+        return true;
+    case RatEventTransportChanged:
+        if(!app->transport || rat_transport_type(app->transport) != app->settings.transport) {
+            transport_stop(app);
+            transport_start(app);
+            menu_refresh(app);
+        }
         return true;
     default:
         return false;

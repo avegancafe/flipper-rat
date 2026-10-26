@@ -27,6 +27,7 @@ typedef enum {
     RatEventStatusChanged = 100,
     RatEventMotionReady,
     RatEventExitMode,
+    RatEventTransportChanged,
 } RatCustomEvent;
 
 typedef enum {
