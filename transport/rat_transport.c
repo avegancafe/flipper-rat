@@ -27,6 +27,7 @@ struct RatTransport {
 
     /* USB */
     FuriHalUsbInterface* usb_prev;
+    FuriTimer* usb_poll;
 
     /* BLE */
     Bt* bt;
@@ -38,8 +39,12 @@ static void rat_set_connected(RatTransport* t, bool connected) {
     if(t->status_cb) t->status_cb(connected, t->context);
 }
 
-static void rat_usb_state_cb(bool state, void* context) {
-    rat_set_connected(context, state);
+/* The HAL's USB state callback runs in the USB interrupt, where the GUI can't be notified.
+ * Poll the connection flag from the timer thread instead. */
+static void rat_usb_poll_cb(void* context) {
+    RatTransport* t = context;
+    bool connected = furi_hal_hid_is_connected();
+    if(connected != t->connected) rat_set_connected(t, connected);
 }
 
 static void rat_bt_status_cb(BtStatus status, void* context) {
@@ -61,8 +66,9 @@ RatTransport* rat_transport_start(
         t->usb_prev = furi_hal_usb_get_config();
         furi_hal_usb_unlock();
         furi_check(furi_hal_usb_set_config(&usb_hid, NULL));
-        furi_hal_hid_set_state_callback(rat_usb_state_cb, t);
         t->connected = furi_hal_hid_is_connected();
+        t->usb_poll = furi_timer_alloc(rat_usb_poll_cb, FuriTimerTypePeriodic, t);
+        furi_timer_start(t->usb_poll, furi_ms_to_ticks(250));
     } else {
         t->bt = furi_record_open(RECORD_BT);
         bt_disconnect(t->bt);
@@ -82,7 +88,8 @@ void rat_transport_stop(RatTransport* t) {
     rat_release_all(t);
 
     if(t->type == RatTransportUsb) {
-        furi_hal_hid_set_state_callback(NULL, NULL);
+        furi_timer_stop(t->usb_poll);
+        furi_timer_free(t->usb_poll);
         furi_hal_usb_set_config(t->usb_prev, NULL);
     } else {
         bt_set_status_changed_callback(t->bt, NULL, NULL);
