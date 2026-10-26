@@ -4,7 +4,4 @@ Name: Keynote
 OS: macOS
 next: RIGHT
 prev: LEFT
-start: CMD+ALT+P
-stop: ESC
-black: B
 pointer: none

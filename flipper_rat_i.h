@@ -20,7 +20,6 @@ typedef enum {
     RatViewSettings,
     RatViewDialog,
     RatViewMouse,
-    RatViewPresenter,
 } RatViewId;
 
 typedef enum {
@@ -38,10 +37,9 @@ typedef enum {
 
 typedef struct RatApp RatApp;
 
-/* Mode views (views/rat_mode_view.c). Each owns its View; the app wires it into the dispatcher. */
+/* The live mouse + slides screen (views/rat_mode_view.c). The app wires its View into the dispatcher. */
 typedef struct RatModeView RatModeView;
 RatModeView* rat_mouse_view_alloc(RatApp* app);
-RatModeView* rat_presenter_view_alloc(RatApp* app);
 void rat_mode_view_free(RatModeView* mv);
 View* rat_mode_view_get_view(RatModeView* mv);
 /* Called on the GUI thread when connection status or motion readiness changes. */
@@ -58,7 +56,6 @@ struct RatApp {
     DialogEx* dialog;
     RatDialogKind dialog_kind;
     RatModeView* mouse_view;
-    RatModeView* presenter_view;
 
     RatSettings settings;
     RatProfile profile;

@@ -172,7 +172,7 @@ static void test_grip(void) {
 
 /* Every bundled profile must have a Name and parseable chords for the known actions. */
 static void test_default_profiles(void) {
-    static const char* const actions[] = {"next", "prev", "start", "stop", "black", "pointer"};
+    static const char* const actions[] = {"next", "prev", "pointer"};
     DIR* d = opendir("files/profiles");
     CHECK(d != NULL);
     if(!d) return;
@@ -208,7 +208,7 @@ static void test_default_profiles(void) {
         }
         fclose(f);
         CHECK(header && has_name);
-        CHECK(found == 6);
+        CHECK(found == 3);
     }
     closedir(d);
     CHECK(files >= 7);

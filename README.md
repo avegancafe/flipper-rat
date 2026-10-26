@@ -21,32 +21,22 @@ ufbt update --hw-target=f7 --url=https://update.flipperzero.one/builds/firmware/
 
 On the Flipper: **Apps → GPIO → flipper-rat**.
 
-## Modes
+## Controls
 
-**Air Mouse** (motion sensor; hold the Flipper still for a moment while it calibrates)
+Pick **Start** in the menu. One screen does both: it's an air mouse, and Up/Down change slides
+using the selected profile. Hold the Flipper still for a moment while it calibrates.
 
 | Button | Action |
 |---|---|
 | hold **Right** | move the cursor (clutch). In *Always on* mode, Right pauses/resumes |
-| **OK** | left click; the cursor freezes while you click. Hold ~0.3 s, then move = drag |
-| **Left** | middle click |
+| **OK** | left click. Hold ~0.3 s, then move = drag |
+| **Down / Up** | next / previous slide (profile `next` / `prev`) |
+| **Left** | laser pointer toggle (profile `pointer`) |
 | **Back** | right click |
-| **Up / Down** | scroll |
 | hold **Back** | back to menu |
 
-Without the Video Game Module the d-pad moves the cursor instead.
-
-**Presenter** (uses the selected profile)
-
-| Button | Action |
-|---|---|
-| **Right / Left** | `next` / `prev` |
-| **Up** | `start` |
-| **Down** | `black` |
-| **OK** | `pointer` (e.g. laser pointer toggle) |
-| hold **OK** | move the cursor with motion while held |
-| **Back** | `stop` |
-| hold **Back** | back to menu |
+The cursor stays put while a click or slide button is down. Without the Video Game Module the
+d-pad moves the cursor instead.
 
 ## Profiles
 
@@ -60,9 +50,6 @@ Name: Keynote
 OS: macOS
 next: RIGHT
 prev: LEFT
-start: CMD+ALT+P
-stop: ESC
-black: B
 pointer: none
 ```
 

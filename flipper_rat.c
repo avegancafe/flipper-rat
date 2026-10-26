@@ -6,7 +6,6 @@
 
 typedef enum {
     MenuAirMouse,
-    MenuPresenter,
     MenuProfile,
     MenuSettings,
     MenuForget,
@@ -62,9 +61,6 @@ static void menu_cb(void* context, uint32_t index) {
     switch(index) {
     case MenuAirMouse:
         view_dispatcher_switch_to_view(app->view_dispatcher, RatViewMouse);
-        break;
-    case MenuPresenter:
-        view_dispatcher_switch_to_view(app->view_dispatcher, RatViewPresenter);
         break;
     case MenuProfile:
         profiles_menu_build(app);
@@ -128,7 +124,7 @@ static void profiles_menu_cb(void* context, uint32_t index) {
 static void profiles_menu_build(RatApp* app) {
     profiles_clear(app);
     submenu_reset(app->profiles_menu);
-    submenu_set_header(app->profiles_menu, "Presenter profile");
+    submenu_set_header(app->profiles_menu, "Slides profile");
 
     File* dir = storage_file_alloc(app->storage);
     FuriString* path = furi_string_alloc();
@@ -306,11 +302,9 @@ static bool custom_event_cb(void* context, uint32_t event) {
     case RatEventStatusChanged:
         menu_refresh(app);
         rat_mode_view_refresh(app->mouse_view);
-        rat_mode_view_refresh(app->presenter_view);
         return true;
     case RatEventMotionReady:
         rat_mode_view_motion_ready(app->mouse_view);
-        rat_mode_view_motion_ready(app->presenter_view);
         return true;
     case RatEventExitMode:
         view_dispatcher_switch_to_view(app->view_dispatcher, RatViewMenu);
@@ -357,8 +351,7 @@ static RatApp* rat_app_alloc(void) {
     view_dispatcher_attach_to_gui(app->view_dispatcher, app->gui, ViewDispatcherTypeFullscreen);
 
     app->menu = submenu_alloc();
-    submenu_add_item(app->menu, "Air Mouse", MenuAirMouse, menu_cb, app);
-    submenu_add_item(app->menu, "Presenter", MenuPresenter, menu_cb, app);
+    submenu_add_item(app->menu, "Start", MenuAirMouse, menu_cb, app);
     submenu_add_item(app->menu, "Profile", MenuProfile, menu_cb, app);
     submenu_add_item(app->menu, "Settings", MenuSettings, menu_cb, app);
     submenu_add_item(app->menu, "Forget BT pairings", MenuForget, menu_cb, app);
@@ -385,17 +378,11 @@ static RatApp* rat_app_alloc(void) {
     view_dispatcher_add_view(
         app->view_dispatcher, RatViewMouse, rat_mode_view_get_view(app->mouse_view));
 
-    app->presenter_view = rat_presenter_view_alloc(app);
-    view_set_previous_callback(rat_mode_view_get_view(app->presenter_view), nav_menu);
-    view_dispatcher_add_view(
-        app->view_dispatcher, RatViewPresenter, rat_mode_view_get_view(app->presenter_view));
 
     return app;
 }
 
 static void rat_app_free(RatApp* app) {
-    view_dispatcher_remove_view(app->view_dispatcher, RatViewPresenter);
-    rat_mode_view_free(app->presenter_view);
     view_dispatcher_remove_view(app->view_dispatcher, RatViewMouse);
     rat_mode_view_free(app->mouse_view);
     view_dispatcher_remove_view(app->view_dispatcher, RatViewDialog);

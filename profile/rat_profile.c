@@ -8,9 +8,6 @@
 static const char* const action_keys[RatActionCount] = {
     [RatActionNext] = "next",
     [RatActionPrev] = "prev",
-    [RatActionStart] = "start",
-    [RatActionStop] = "stop",
-    [RatActionBlack] = "black",
     [RatActionPointer] = "pointer",
 };
 
@@ -20,9 +17,6 @@ void rat_profile_set_generic(RatProfile* p) {
     strlcpy(p->os, "Any", sizeof(p->os));
     rat_chord_parse("RIGHT", &p->chords[RatActionNext]);
     rat_chord_parse("LEFT", &p->chords[RatActionPrev]);
-    rat_chord_parse("F5", &p->chords[RatActionStart]);
-    rat_chord_parse("ESC", &p->chords[RatActionStop]);
-    rat_chord_parse("B", &p->chords[RatActionBlack]);
     p->chords[RatActionPointer] = RAT_CHORD_NONE;
 }
 

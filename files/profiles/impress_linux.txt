@@ -4,7 +4,4 @@ Name: Impress
 OS: Linux
 next: RIGHT
 prev: LEFT
-start: F5
-stop: ESC
-black: B
 pointer: none

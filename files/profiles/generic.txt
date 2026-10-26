@@ -5,7 +5,4 @@ Name: Generic
 OS: Any
 next: RIGHT
 prev: LEFT
-start: F5
-stop: ESC
-black: B
 pointer: none

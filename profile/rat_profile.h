@@ -1,6 +1,6 @@
 #pragma once
 
-/* Presenter profiles (one flipper_format text file per presentation tool) and app settings. */
+/* Slide profiles (one flipper_format text file per presentation tool) and app settings. */
 
 #include <furi.h>
 #include <storage/storage.h>
@@ -17,9 +17,6 @@
 typedef enum {
     RatActionNext,
     RatActionPrev,
-    RatActionStart,
-    RatActionStop,
-    RatActionBlack,
     RatActionPointer,
     RatActionCount,
 } RatAction;
