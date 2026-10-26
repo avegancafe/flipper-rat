@@ -23,16 +23,17 @@ On the Flipper: **Apps → GPIO → flipper-rat**.
 
 ## Controls
 
-Pick **Start** in the menu. One screen does both: it's an air mouse, and Up/Down change slides
+Pick **Start** in the menu. One screen does both: it's an air mouse, and Back/Up change slides
 using the selected profile. Hold the Flipper still for a moment while it calibrates.
 
 | Button | Action |
 |---|---|
 | hold **Right** | move the cursor (clutch). In *Always on* mode, Right pauses/resumes |
 | **OK** | left click. Hold ~0.3 s, then move = drag |
-| **Down / Up** | next / previous slide (profile `next` / `prev`) |
+| **Back** | next slide (profile `next`) |
+| **Up** | previous slide (profile `prev`) |
+| **Down** | right click |
 | **Left** | laser pointer toggle (profile `pointer`) |
-| **Back** | right click |
 | hold **Back** | back to menu |
 
 The cursor stays put while a click or slide button is down. Without the Video Game Module the

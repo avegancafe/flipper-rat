@@ -120,8 +120,8 @@ static void mode_draw_cb(Canvas* canvas, void* model) {
 
     canvas_set_font(canvas, FontSecondary);
     canvas_draw_str(canvas, 0, 35, m->profile);
-    canvas_draw_str(canvas, 0, 45, "^v slides   OK click");
-    canvas_draw_str(canvas, 0, 54, m->has_pointer_key ? "< laser   Back right" : "Back right-click");
+    canvas_draw_str(canvas, 0, 45, "Back next  ^ prev  OK click");
+    canvas_draw_str(canvas, 0, 54, m->has_pointer_key ? "v right-click  < laser" : "v right-click");
     canvas_draw_str(canvas, 0, 63, "Hold Back to exit");
 }
 
@@ -144,7 +144,7 @@ static void track_freeze(RatModeView* mv, InputEvent* e) {
     mode_update_active(mv);
 }
 
-/* Previous/next slide using the profile's keys, held for as long as the button is. */
+/* Previous slide using the profile's key, held for as long as the button is. */
 static void slide_key(RatModeView* mv, InputEvent* e, RatAction action) {
     uint16_t chord = mv->app->profile.chords[action];
     if(e->type == InputTypePress) {
@@ -189,8 +189,12 @@ static bool mode_input_cb(InputEvent* e, void* context) {
 
     switch(e->key) {
     case InputKeyBack:
+        /* Short = next slide (sent on release, since a long press exits). */
         track_freeze(mv, e);
-        if(e->type == InputTypeShort) {
+        if(e->type == InputTypeShort && has_imu) {
+            rat_kb_tap(t, mv->app->profile.chords[RatActionNext]);
+        } else if(e->type == InputTypeShort) {
+            /* No motion module: Down moves the cursor, so Back stays right-click. */
             rat_mouse_press(t, HID_MOUSE_BTN_RIGHT);
             furi_delay_ms(20);
             rat_mouse_release(t, HID_MOUSE_BTN_RIGHT);
@@ -249,11 +253,16 @@ static bool mode_input_cb(InputEvent* e, void* context) {
         break;
 
     case InputKeyDown:
-        if(has_imu) {
-            track_freeze(mv, e);
-            slide_key(mv, e, RatActionNext);
-        } else {
+        if(!has_imu) {
             dpad_move(mv, e);
+            break;
+        }
+        /* Right mouse button, down for as long as the key is. */
+        track_freeze(mv, e);
+        if(e->type == InputTypePress) {
+            rat_mouse_press(t, HID_MOUSE_BTN_RIGHT);
+        } else if(e->type == InputTypeRelease) {
+            rat_mouse_release(t, HID_MOUSE_BTN_RIGHT);
         }
         break;
 
