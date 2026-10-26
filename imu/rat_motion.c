@@ -41,6 +41,7 @@ struct RatMotion {
     volatile bool active;
     Quat q;
     RatTracker tracker;
+    RatDriftComp drift;
 };
 
 RatImu* rat_imu_alloc(void) {
@@ -70,25 +71,53 @@ static void irq_cb(void* context) {
     furi_thread_flags_set(furi_thread_get_id(m->thread), FlagData);
 }
 
-static void calibrate_gyro(ICM42688P* sensor) {
-    ICM42688PRawData raw;
-    ICM42688PScaledData offset = {0};
-    icm42688p_write_gyro_offset(sensor, &offset);
-    furi_delay_ms(10);
+#define CALI_MAX_TRIES 10 /* ~5 s; then take the stillest window and let drift correction fix it */
 
-    int32_t sx = 0, sy = 0, sz = 0;
-    for(int i = 0; i < CALI_SAMPLES; i++) {
-        icm42688p_read_gyro_raw(sensor, &raw);
-        sx += raw.x;
-        sy += raw.y;
-        sz += raw.z;
-        furi_delay_ms(2);
+/* Measure the gyro's resting reading and load it into the sensor's offset registers.
+ * Retries until a window looks still, so a hand still moving from the menu press doesn't
+ * get baked in as bias. Returns false if a stop was requested meanwhile. */
+static bool calibrate_gyro(ICM42688P* sensor) {
+    ICM42688PRawData raw;
+    ICM42688PScaledData zero = {0}, best = {0};
+    float best_std = INFINITY;
+    icm42688p_write_gyro_offset(sensor, &zero);
+    furi_delay_ms(10);
+    const float scale = icm42688p_gyro_get_full_scale(sensor) / 32768.f;
+
+    for(int tries = 0; tries < CALI_MAX_TRIES; tries++) {
+        float sx = 0, sy = 0, sz = 0, qx = 0, qy = 0, qz = 0;
+        for(int i = 0; i < CALI_SAMPLES; i++) {
+            icm42688p_read_gyro_raw(sensor, &raw);
+            float x = raw.x * scale, y = raw.y * scale, z = raw.z * scale;
+            sx += x;
+            sy += y;
+            sz += z;
+            qx += x * x;
+            qy += y * y;
+            qz += z * z;
+            furi_delay_ms(2);
+        }
+        if(furi_thread_flags_get() & FlagStop) return false;
+
+        const float n = CALI_SAMPLES;
+        RatVec3 mean = {sx / n, sy / n, sz / n};
+        RatVec3 sd = {
+            sqrtf(fmaxf(qx / n - mean.x * mean.x, 0.f)),
+            sqrtf(fmaxf(qy / n - mean.y * mean.y, 0.f)),
+            sqrtf(fmaxf(qz / n - mean.z * mean.z, 0.f)),
+        };
+        float worst = fmaxf(sd.x, fmaxf(sd.y, sd.z));
+        if(worst < best_std) {
+            best_std = worst;
+            best = (ICM42688PScaledData){mean.x, mean.y, mean.z};
+        }
+        if(rat_calib_is_still(mean, sd)) {
+            FURI_LOG_I(TAG, "Calibrated after %d tries, std %.2f dps", tries + 1, (double)worst);
+            break;
+        }
     }
-    raw.x = sx / CALI_SAMPLES;
-    raw.y = sy / CALI_SAMPLES;
-    raw.z = sz / CALI_SAMPLES;
-    icm42688p_apply_scale(&raw, icm42688p_gyro_get_full_scale(sensor), &offset);
-    icm42688p_write_gyro_offset(sensor, &offset);
+    icm42688p_write_gyro_offset(sensor, &best);
+    return true;
 }
 
 static float inv_sqrt(float x) {
@@ -150,8 +179,9 @@ static void process_packet(
     icm42688p_apply_scale_fifo(m->imu->sensor, pkt, &sa, &sg);
 
     const float d2r = (float)M_PI / 180.f;
+    RatVec3 gd = rat_drift_apply(&m->drift, (RatVec3){sg.x, sg.y, sg.z});
     RatVec3 a = rat_grip_remap(m->grip, (RatVec3){sa.x, sa.y, sa.z});
-    RatVec3 g = rat_grip_remap(m->grip, (RatVec3){sg.x * d2r, sg.y * d2r, sg.z * d2r});
+    RatVec3 g = rat_grip_remap(m->grip, (RatVec3){gd.x * d2r, gd.y * d2r, gd.z * d2r});
     madgwick(&m->q, a, g);
 
     Quat* q = &m->q;
@@ -177,12 +207,13 @@ static int32_t motion_thread(void* context) {
     RatMotion* m = context;
     ICM42688P* sensor = m->imu->sensor;
 
-    calibrate_gyro(sensor);
+    if(!calibrate_gyro(sensor)) return 0;
     icm42688p_accel_config(sensor, AccelFullScale16G, SAMPLE_RATE);
     icm42688p_gyro_config(sensor, GyroFullScale2000DPS, SAMPLE_RATE);
 
     m->q = (Quat){1.f, 0.f, 0.f, 0.f};
     rat_tracker_reset(&m->tracker);
+    rat_drift_reset(&m->drift);
     uint32_t rate_div = (uint32_t)SAMPLE_FREQ / rat_transport_report_rate(m->transport);
     uint32_t sample_cnt = 0;
 

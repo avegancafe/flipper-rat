@@ -57,3 +57,30 @@ void rat_tracker_feed(
 
 /* Take accumulated movement as one HID report. Returns true if (dx, dy) is non-zero. */
 bool rat_tracker_take(RatTracker* t, const RatMotionConfig* cfg, int8_t* dx, int8_t* dy);
+
+/* ---------- gyro bias (drift) ---------- */
+
+/* Calibration window: the Flipper counts as still when every gyro axis has a standard
+ * deviation below RAT_CALIB_MAX_STD_DPS and a mean below RAT_CALIB_MAX_MEAN_DPS (real sensor
+ * bias is well under that; a bigger mean means the hand was turning). */
+#define RAT_CALIB_MAX_STD_DPS  2.0f
+#define RAT_CALIB_MAX_MEAN_DPS 4.0f
+bool rat_calib_is_still(RatVec3 mean_dps, RatVec3 std_dps);
+
+/* Running drift correction. After calibration a little bias usually remains (or the hand moved
+ * slightly while calibrating). Whenever the corrected gyro stays within RAT_STILL_DPS on every
+ * axis for RAT_STILL_SAMPLES samples, the bias estimate slowly follows the reading. */
+#define RAT_STILL_DPS      1.5f
+#define RAT_STILL_SAMPLES  500 /* 0.5 s at 1 kHz */
+#define RAT_DRIFT_ALPHA    (1.f / 3000.f) /* ~3 s time constant at 1 kHz */
+#define RAT_DRIFT_MAX_DPS  5.0f
+
+typedef struct {
+    RatVec3 bias; /* degrees per second */
+    uint32_t still_count;
+} RatDriftComp;
+
+void rat_drift_reset(RatDriftComp* d);
+
+/* Update the estimate with one gyro sample (deg/s) and return the corrected sample. */
+RatVec3 rat_drift_apply(RatDriftComp* d, RatVec3 gyro_dps);

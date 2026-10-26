@@ -81,3 +81,35 @@ bool rat_tracker_take(RatTracker* t, const RatMotionConfig* cfg, int8_t* dx, int
     *dy = rat_exp_rate(my, cfg->curve);
     return (*dx != 0) || (*dy != 0);
 }
+
+bool rat_calib_is_still(RatVec3 mean_dps, RatVec3 std_dps) {
+    return fabsf(mean_dps.x) < RAT_CALIB_MAX_MEAN_DPS &&
+           fabsf(mean_dps.y) < RAT_CALIB_MAX_MEAN_DPS &&
+           fabsf(mean_dps.z) < RAT_CALIB_MAX_MEAN_DPS && std_dps.x < RAT_CALIB_MAX_STD_DPS &&
+           std_dps.y < RAT_CALIB_MAX_STD_DPS && std_dps.z < RAT_CALIB_MAX_STD_DPS;
+}
+
+void rat_drift_reset(RatDriftComp* d) {
+    d->bias = (RatVec3){0.f, 0.f, 0.f};
+    d->still_count = 0;
+}
+
+RatVec3 rat_drift_apply(RatDriftComp* d, RatVec3 g) {
+    RatVec3 c = {g.x - d->bias.x, g.y - d->bias.y, g.z - d->bias.z};
+    bool still = fabsf(c.x) < RAT_STILL_DPS && fabsf(c.y) < RAT_STILL_DPS &&
+                 fabsf(c.z) < RAT_STILL_DPS;
+
+    if(!still) {
+        d->still_count = 0;
+        return c;
+    }
+    if(d->still_count < RAT_STILL_SAMPLES) {
+        d->still_count++;
+        return c;
+    }
+
+    d->bias.x = clampf(d->bias.x + RAT_DRIFT_ALPHA * c.x, -RAT_DRIFT_MAX_DPS, RAT_DRIFT_MAX_DPS);
+    d->bias.y = clampf(d->bias.y + RAT_DRIFT_ALPHA * c.y, -RAT_DRIFT_MAX_DPS, RAT_DRIFT_MAX_DPS);
+    d->bias.z = clampf(d->bias.z + RAT_DRIFT_ALPHA * c.z, -RAT_DRIFT_MAX_DPS, RAT_DRIFT_MAX_DPS);
+    return (RatVec3){g.x - d->bias.x, g.y - d->bias.y, g.z - d->bias.z};
+}

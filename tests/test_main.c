@@ -214,12 +214,45 @@ static void test_default_profiles(void) {
     CHECK(files >= 7);
 }
 
+static void test_drift(void) {
+    /* Calibration stillness check. */
+    CHECK(rat_calib_is_still((RatVec3){0.3f, -0.2f, 0.1f}, (RatVec3){0.5f, 0.6f, 0.4f}));
+    CHECK(!rat_calib_is_still((RatVec3){6.f, 0.f, 0.f}, (RatVec3){0.5f, 0.5f, 0.5f}));
+    CHECK(!rat_calib_is_still((RatVec3){0.f, 0.f, 0.f}, (RatVec3){0.5f, 3.f, 0.5f}));
+
+    /* A constant leftover bias while still is learned away (10 s at 1 kHz). */
+    RatDriftComp d;
+    rat_drift_reset(&d);
+    RatVec3 out = {0};
+    for(int i = 0; i < 10000; i++) out = rat_drift_apply(&d, (RatVec3){0.8f, -0.5f, 0.3f});
+    CHECK(fabsf(out.x) < 0.05f && fabsf(out.y) < 0.05f && fabsf(out.z) < 0.05f);
+    CHECK(fabsf(d.bias.x - 0.8f) < 0.05f);
+
+    /* Nothing is learned during the first 0.5 s of stillness. */
+    rat_drift_reset(&d);
+    for(int i = 0; i < RAT_STILL_SAMPLES; i++) rat_drift_apply(&d, (RatVec3){1.f, 0.f, 0.f});
+    CHECK(d.bias.x == 0.f);
+
+    /* Real motion is passed through and never learned; it also restarts the still timer. */
+    rat_drift_reset(&d);
+    for(int i = 0; i < 5000; i++) out = rat_drift_apply(&d, (RatVec3){30.f, 0.f, 0.f});
+    CHECK(d.bias.x == 0.f && out.x == 30.f);
+    CHECK(d.still_count == 0);
+
+    /* Learned bias is subtracted from later motion. */
+    rat_drift_reset(&d);
+    for(int i = 0; i < 20000; i++) rat_drift_apply(&d, (RatVec3){0.f, 0.f, 1.f});
+    out = rat_drift_apply(&d, (RatVec3){0.f, 0.f, 21.f});
+    CHECK(fabsf(out.z - 20.f) < 0.05f);
+}
+
 int main(void) {
     test_keycodes();
     test_chords();
     test_angle_and_curve();
     test_tracker();
     test_grip();
+    test_drift();
     test_default_profiles();
     printf("%d checks, %d failures\n", checks, failures);
     return failures ? 1 : 0;
