@@ -34,14 +34,27 @@ typedef struct {
     float curve; /* rat_exp_rate exponent */
     bool invert_x;
     bool invert_y;
+    /* Reports per second; enables smoothing. 0 sends everything immediately (no smoothing). */
+    float report_hz;
 } RatMotionConfig;
+
+/* Smoothing: each report sends only part of the pending movement, which is a low-pass filter on
+ * cursor speed (nothing is lost, it's just spread out). The cutoff rises with speed, so slow
+ * aiming is steady and fast flicks stay snappy (the "1 euro filter" idea). */
+#define RAT_SMOOTH_MIN_HZ 2.5f /* cutoff when nearly still */
+#define RAT_SMOOTH_BETA   0.03f /* extra Hz per count/second of speed */
+
+/* Fraction of the pending movement to send this report (1 = all). */
+float rat_smooth_alpha(float pending_counts, float report_hz);
 
 typedef struct {
     bool has_last;
     float last_yaw;
     float last_pitch;
-    float acc_x;
+    float acc_x; /* movement not sent yet, in counts */
     float acc_y;
+    float taken_x; /* what the last take removed, for untake */
+    float taken_y;
 } RatTracker;
 
 void rat_tracker_reset(RatTracker* t);
@@ -57,6 +70,9 @@ void rat_tracker_feed(
 
 /* Take accumulated movement as one HID report. Returns true if (dx, dy) is non-zero. */
 bool rat_tracker_take(RatTracker* t, const RatMotionConfig* cfg, int8_t* dx, int8_t* dy);
+
+/* The last report couldn't be sent (radio busy): put its movement back so it goes out later. */
+void rat_tracker_untake(RatTracker* t);
 
 /* ---------- gyro bias (drift) ---------- */
 

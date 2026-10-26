@@ -12,7 +12,7 @@
 
 #define SAMPLE_RATE     DataRate1kHz
 #define SAMPLE_FREQ     1000.f
-#define FILTER_BETA     0.08f
+#define FILTER_BETA     0.04f /* lower = less accelerometer (hand-jolt) noise in tilt */
 #define CALI_SAMPLES    256
 #define PITCH_LIMIT_DEG 75.f
 
@@ -199,8 +199,9 @@ static void process_packet(
     if(++(*sample_cnt) >= rate_div) {
         *sample_cnt = 0;
         int8_t dx, dy;
-        if(rat_tracker_take(&m->tracker, &m->config, &dx, &dy)) {
-            rat_mouse_move(m->transport, dx, dy);
+        if(rat_tracker_take(&m->tracker, &m->config, &dx, &dy) &&
+           !rat_mouse_move(m->transport, dx, dy)) {
+            rat_tracker_untake(&m->tracker); /* link busy: send it with the next report */
         }
     }
 }
@@ -217,6 +218,7 @@ static int32_t motion_thread(void* context) {
     rat_tracker_reset(&m->tracker);
     rat_drift_reset(&m->drift);
     uint32_t rate_div = (uint32_t)SAMPLE_FREQ / rat_transport_report_rate(m->transport);
+    m->config.report_hz = SAMPLE_FREQ / (float)rate_div;
     uint32_t sample_cnt = 0;
 
     icm42688_fifo_enable(sensor, irq_cb, m);

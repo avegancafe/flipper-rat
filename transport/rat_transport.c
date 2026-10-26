@@ -113,7 +113,7 @@ bool rat_transport_is_connected(const RatTransport* t) {
 }
 
 uint32_t rat_transport_report_rate(const RatTransport* t) {
-    return t->type == RatTransportUsb ? 200 : 30;
+    return t->type == RatTransportUsb ? 200 : 60;
 }
 
 #define LOCKED(t, usb_call, ble_call)                                                \
@@ -144,8 +144,10 @@ void rat_kb_tap(RatTransport* t, uint16_t chord) {
     rat_kb_release(t, chord);
 }
 
-void rat_mouse_move(RatTransport* t, int8_t dx, int8_t dy) {
-    LOCKED(t, furi_hal_hid_mouse_move(dx, dy), ble_profile_hid_mouse_move(t->ble, dx, dy));
+bool rat_mouse_move(RatTransport* t, int8_t dx, int8_t dy) {
+    bool ok = false;
+    LOCKED(t, ok = furi_hal_hid_mouse_move(dx, dy), ok = ble_profile_hid_mouse_move(t->ble, dx, dy));
+    return ok;
 }
 
 void rat_mouse_press(RatTransport* t, uint8_t buttons) {

@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <math.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static int failures = 0;
@@ -156,6 +157,50 @@ static void test_tracker(void) {
     CHECK(!rat_tracker_take(&t, &c, &dx, &dy));
 }
 
+static void test_smoothing(void) {
+    RatMotionConfig c = cfg(10.f, 1.0f);
+    c.report_hz = 60.f;
+    RatTracker t;
+    int8_t dx, dy;
+
+    CHECK(rat_smooth_alpha(5.f, 0.f) == 1.f);
+    /* Slow movement is smoothed hard, fast movement barely. */
+    float slow = rat_smooth_alpha(1.f, 60.f), fast = rat_smooth_alpha(40.f, 60.f);
+    CHECK(slow < 0.35f && fast > 0.8f && fast <= 1.f);
+
+    /* Steady movement: every count arrives (no loss), at the input speed once settled. */
+    rat_tracker_reset(&t);
+    rat_tracker_feed(&t, &c, 0.f, 0.f, true);
+    int total = 0, last = 0;
+    for(int i = 1; i <= 120; i++) {
+        rat_tracker_feed(&t, &c, -0.5f * i, 0.f, true); /* 5 counts per report */
+        if(rat_tracker_take(&t, &c, &dx, &dy)) total += dx;
+        last = dx;
+    }
+    CHECK(last >= 4 && last <= 6);
+    CHECK(abs(total + (int)t.acc_x - 600) <= 1);
+
+    /* Shaky hand (+-2 counts back and forth): output wobble is much smaller than input. */
+    rat_tracker_reset(&t);
+    rat_tracker_feed(&t, &c, 0.f, 0.f, true);
+    int peak = 0;
+    for(int i = 1; i <= 120; i++) {
+        rat_tracker_feed(&t, &c, (i % 2) ? -0.2f : 0.f, 0.f, true);
+        rat_tracker_take(&t, &c, &dx, &dy);
+        if(abs(dx) > peak) peak = abs(dx);
+    }
+    CHECK(peak <= 1);
+
+    /* A report that couldn't be sent is put back. */
+    rat_tracker_reset(&t);
+    c.report_hz = 0.f;
+    rat_tracker_feed(&t, &c, 0.f, 0.f, true);
+    rat_tracker_feed(&t, &c, -1.f, 0.f, true);
+    CHECK(rat_tracker_take(&t, &c, &dx, &dy) && dx == 10);
+    rat_tracker_untake(&t);
+    CHECK(rat_tracker_take(&t, &c, &dx, &dy) && dx == 10);
+}
+
 static void test_grip(void) {
     RatVec3 v = {.x = 1.f, .y = 2.f, .z = 3.f};
     RatVec3 f = rat_grip_remap(RatGripFlat, v);
@@ -251,6 +296,7 @@ int main(void) {
     test_chords();
     test_angle_and_curve();
     test_tracker();
+    test_smoothing();
     test_grip();
     test_drift();
     test_default_profiles();

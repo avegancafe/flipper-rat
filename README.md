@@ -69,6 +69,9 @@ grip (flat = screen up; upright = screen facing you, top edge up), left/right (n
 up/down (*Point*: tilt up to move up, the default; *Flight*: tilt up to move down, like a joystick).
 Stored in `SD:/apps_data/flipper_rat/settings.txt`.
 
+Movement is smoothed (more when moving slowly, barely when moving fast) and sent at 60 updates/s
+over Bluetooth, 200 over USB.
+
 Bluetooth shows up as **`Rat <your Flipper's name>`** with its own pairing store, so it doesn't
 disturb the phone app or other remotes. *Forget BT pairings* in the menu clears it.
 

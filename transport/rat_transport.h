@@ -33,7 +33,8 @@ void rat_kb_release(RatTransport* t, uint16_t chord);
 void rat_kb_tap(RatTransport* t, uint16_t chord);
 
 /* Mouse. `buttons` = HID_MOUSE_BTN_* bits. */
-void rat_mouse_move(RatTransport* t, int8_t dx, int8_t dy);
+/* Returns false if the report couldn't be queued (e.g. Bluetooth link busy). */
+bool rat_mouse_move(RatTransport* t, int8_t dx, int8_t dy);
 void rat_mouse_press(RatTransport* t, uint8_t buttons);
 void rat_mouse_release(RatTransport* t, uint8_t buttons);
 void rat_mouse_scroll(RatTransport* t, int8_t delta);
