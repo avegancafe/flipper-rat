@@ -146,7 +146,12 @@ void rat_kb_tap(RatTransport* t, uint16_t chord) {
 
 bool rat_mouse_move(RatTransport* t, int8_t dx, int8_t dy) {
     bool ok = false;
-    LOCKED(t, ok = furi_hal_hid_mouse_move(dx, dy), ok = ble_profile_hid_mouse_move(t->ble, dx, dy));
+    /* BLE: firmware 1.4.3's ble_gatt_characteristic_update returns true on *failure* (and it
+     * already retries a busy link for up to 1 s), so its result is meaningless; treat as sent. */
+    LOCKED(t, ok = furi_hal_hid_mouse_move(dx, dy), {
+        ble_profile_hid_mouse_move(t->ble, dx, dy);
+        ok = true;
+    });
     return ok;
 }
 

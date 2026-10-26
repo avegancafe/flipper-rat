@@ -201,7 +201,7 @@ static void process_packet(
         int8_t dx, dy;
         if(rat_tracker_take(&m->tracker, &m->config, &dx, &dy) &&
            !rat_mouse_move(m->transport, dx, dy)) {
-            rat_tracker_untake(&m->tracker); /* link busy: send it with the next report */
+            rat_tracker_untake(&m->tracker); /* USB busy: send it with the next report */
         }
     }
 }
