@@ -39,6 +39,7 @@ struct RatMotion {
     RatMotionReadyCallback ready_cb;
     void* context;
     volatile bool active;
+    volatile uint32_t suppress_until; /* furi tick */
     Quat q;
     RatTracker tracker;
     RatDriftComp drift;
@@ -192,7 +193,8 @@ static void process_packet(
     if(!isfinite(pitch) || pitch < -PITCH_LIMIT_DEG || pitch > PITCH_LIMIT_DEG) return;
 
     /* Tilting the top edge up moves the cursor up ("point"); Invert Y gives flight-stick style. */
-    rat_tracker_feed(&m->tracker, &m->config, yaw, pitch, m->active);
+    bool active = m->active && (int32_t)(furi_get_tick() - m->suppress_until) >= 0;
+    rat_tracker_feed(&m->tracker, &m->config, yaw, pitch, active);
 
     if(++(*sample_cnt) >= rate_div) {
         *sample_cnt = 0;
@@ -262,6 +264,10 @@ RatMotion* rat_motion_start(
 
 void rat_motion_set_active(RatMotion* m, bool active) {
     m->active = active;
+}
+
+void rat_motion_suppress(RatMotion* m, uint32_t ms) {
+    m->suppress_until = furi_get_tick() + furi_ms_to_ticks(ms);
 }
 
 void rat_motion_stop(RatMotion* m) {

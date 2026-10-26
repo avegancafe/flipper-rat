@@ -33,10 +33,16 @@ struct RatModeView {
     bool clutch;
     bool ok_held;
     bool middle_held;
+    bool back_held;
+    bool ok_drag; /* OK held past the long-press time: motion drags */
+    bool middle_drag;
     bool paused;
     bool pointer_held;
     uint32_t dpad_repeat;
 };
+
+/* After letting go of a button, ignore the wobble for this long. */
+#define RELEASE_SETTLE_MS 150
 
 #define DPAD_STEP_MIN 4
 #define DPAD_STEP_MAX 24
@@ -51,11 +57,18 @@ static void mode_update_active(RatModeView* mv) {
     if(mv->ready) {
         if(mv->kind == RatModePresenter) {
             active = mv->pointer_held;
-        } else if(mv->app->settings.always_on) {
-            active = !mv->paused;
         } else {
-            /* Clutch: move while Right is held, or while a mouse button is held (drag). */
-            active = mv->clutch || mv->ok_held || mv->middle_held;
+            /* A button that's down but not yet held long enough to drag is a click:
+             * freeze the cursor so pressing it doesn't nudge the pointer. */
+            bool clicking = (mv->ok_held && !mv->ok_drag) || (mv->middle_held && !mv->middle_drag) ||
+                            mv->back_held;
+            bool dragging = mv->ok_drag || mv->middle_drag;
+            if(mv->app->settings.always_on) {
+                active = !mv->paused && !clicking;
+            } else {
+                /* Clutch: move while Right is held, or while dragging with a mouse button. */
+                active = (mv->clutch || dragging) && !clicking;
+            }
         }
     }
     if(mv->motion) rat_motion_set_active(mv->motion, active);
@@ -157,13 +170,18 @@ static void mode_exit_request(RatModeView* mv) {
     view_dispatcher_send_custom_event(mv->app->view_dispatcher, RatEventExitMode);
 }
 
-static void mouse_button(RatModeView* mv, InputEvent* e, uint8_t button, bool* held) {
+static void mouse_button(RatModeView* mv, InputEvent* e, uint8_t button, bool* held, bool* drag) {
     if(e->type == InputTypePress) {
         rat_mouse_press(mv->app->transport, button);
-        if(held) *held = true;
+        *held = true;
+        *drag = false;
+    } else if(e->type == InputTypeLong) {
+        *drag = true; /* held ~0.3 s: now motion drags */
     } else if(e->type == InputTypeRelease) {
         rat_mouse_release(mv->app->transport, button);
-        if(held) *held = false;
+        *held = false;
+        *drag = false;
+        if(mv->motion) rat_motion_suppress(mv->motion, RELEASE_SETTLE_MS);
     }
 }
 
@@ -171,6 +189,13 @@ static bool mouse_input(RatModeView* mv, InputEvent* e) {
     RatTransport* t = mv->app->transport;
 
     if(e->key == InputKeyBack) {
+        if(e->type == InputTypePress) {
+            mv->back_held = true;
+        } else if(e->type == InputTypeRelease) {
+            mv->back_held = false;
+            if(mv->motion) rat_motion_suppress(mv->motion, RELEASE_SETTLE_MS);
+        }
+        mode_update_active(mv);
         if(e->type == InputTypeShort) {
             rat_mouse_press(t, HID_MOUSE_BTN_RIGHT);
             furi_delay_ms(20);
@@ -182,7 +207,7 @@ static bool mouse_input(RatModeView* mv, InputEvent* e) {
     }
 
     if(e->key == InputKeyOk) {
-        mouse_button(mv, e, HID_MOUSE_BTN_LEFT, &mv->ok_held);
+        mouse_button(mv, e, HID_MOUSE_BTN_LEFT, &mv->ok_held, &mv->ok_drag);
         mode_update_active(mv);
         return true;
     }
@@ -226,7 +251,7 @@ static bool mouse_input(RatModeView* mv, InputEvent* e) {
         mode_update_active(mv);
         break;
     case InputKeyLeft:
-        mouse_button(mv, e, HID_MOUSE_BTN_WHEEL, &mv->middle_held);
+        mouse_button(mv, e, HID_MOUSE_BTN_WHEEL, &mv->middle_held, &mv->middle_drag);
         mode_update_active(mv);
         break;
     case InputKeyUp:
@@ -301,6 +326,7 @@ static void mode_enter_cb(void* context) {
     RatModeView* mv = context;
     mv->ready = false;
     mv->clutch = mv->ok_held = mv->middle_held = mv->paused = mv->pointer_held = false;
+    mv->back_held = mv->ok_drag = mv->middle_drag = false;
     mv->motion = rat_app_motion_start(mv->app, mode_motion_ready_cb, mv);
     rat_mode_view_refresh(mv);
     mode_update_active(mv);

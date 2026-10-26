@@ -29,4 +29,8 @@ RatMotion* rat_motion_start(
 
 void rat_motion_set_active(RatMotion* motion, bool active);
 
+/* Ignore movement for the next `ms` milliseconds even while active (e.g. the wobble of
+ * letting go of a button). */
+void rat_motion_suppress(RatMotion* motion, uint32_t ms);
+
 void rat_motion_stop(RatMotion* motion);

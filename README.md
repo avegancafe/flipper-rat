@@ -28,7 +28,7 @@ On the Flipper: **Apps → GPIO → flipper-rat**.
 | Button | Action |
 |---|---|
 | hold **Right** | move the cursor (clutch). In *Always on* mode, Right pauses/resumes |
-| **OK** | left click (hold + move = drag) |
+| **OK** | left click; the cursor freezes while you click. Hold ~0.3 s, then move = drag |
 | **Left** | middle click |
 | **Back** | right click |
 | **Up / Down** | scroll |
